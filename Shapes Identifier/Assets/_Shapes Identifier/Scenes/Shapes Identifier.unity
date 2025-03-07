@@ -806,13 +806,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8b0179dfda4cfad4ba2c20b2c6a5dac8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _inputTexture: {fileID: 2800000, guid: 26503a14737819a4c95e59d9a3876890, type: 3}
+  _inputTexture: {fileID: 2800000, guid: a0628d5279f9ba2459b2f16a92047fe7, type: 3}
   _outputTexture: {fileID: 1049393932}
   _predefinedTextures:
   - {fileID: 2800000, guid: 5caa88b410286ac42b166f587b668ebd, type: 3}
   - {fileID: 2800000, guid: f3818b1dd9709174fb87830b10b2a2e7, type: 3}
   - {fileID: 2800000, guid: b8ea4298390ad144dbffb08bf84fb2f0, type: 3}
-  _threshold: 0.1
+  _threshold: 0.05
 --- !u!4 &1504425057
 Transform:
   m_ObjectHideFlags: 0

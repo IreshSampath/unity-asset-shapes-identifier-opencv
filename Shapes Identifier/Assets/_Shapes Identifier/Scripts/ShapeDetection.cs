@@ -2,17 +2,20 @@ using OpenCVForUnity.CoreModule;
 using OpenCVForUnity.ImgprocModule;
 using OpenCVForUnity.UnityUtils;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Rect = OpenCVForUnity.CoreModule.Rect;
 
 public class ShapeDetection : MonoBehaviour
 {
-    public Texture2D _inputTexture;
-    public Renderer _outputTexture;
+    [SerializeField] Texture2D _inputTexture;
+    [SerializeField] Renderer _outputTexture;
+    [SerializeField] List<Texture2D> _predefinedTextures;
+    [SerializeField] double _threshold = 0.05;
 
-    public List<Texture2D> _predefinedTextures;
-
-    public double _threshold = 0.8;
+    List<double> _matchValues = new List<double>();
+    double _highestMatchValue = 0;
+    string _highestMatchTextureName = "";
 
     void Start()
     {
@@ -23,6 +26,8 @@ public class ShapeDetection : MonoBehaviour
 
     public void CheckFullImage()
     {
+        _matchValues.Clear();
+
         // Convert user-assigned image to OpenCV Mat
         Mat inputMat = new Mat(_inputTexture.height, _inputTexture.width, CvType.CV_8UC4);
         Utils.texture2DToMat(_inputTexture, inputMat);
@@ -30,6 +35,7 @@ public class ShapeDetection : MonoBehaviour
         // Convert user-assigned image to grayscale
         Mat inputGray = new Mat();
         Imgproc.cvtColor(inputMat, inputGray, Imgproc.COLOR_RGBA2GRAY);
+
 
         // Compare with each predefined image
         foreach (var predefinedTexture in _predefinedTextures)
@@ -49,6 +55,7 @@ public class ShapeDetection : MonoBehaviour
             // Find the best match
             Core.MinMaxLocResult matchResult = Core.minMaxLoc(result);
             double maxVal = matchResult.maxVal; // Confidence value (0 to 1)
+            _matchValues.Add(maxVal);
 
             // If the match is above a _threshold, consider it a match
             if (maxVal > _threshold)
@@ -62,6 +69,7 @@ public class ShapeDetection : MonoBehaviour
                 Debug.Log("No match found.");
             }
         }
+        CheckHighestMatch();
 
         // Display the result
         Texture2D outputTexture = new Texture2D(inputMat.cols(), inputMat.rows(), TextureFormat.RGBA32, false);
@@ -71,6 +79,8 @@ public class ShapeDetection : MonoBehaviour
 
     public void CheckTopPartOfImage()
     {
+        _matchValues.Clear();
+
         // Convert user-assigned image to OpenCV Mat
         Mat inputMat = new Mat(_inputTexture.height, _inputTexture.width, CvType.CV_8UC4);
         Utils.texture2DToMat(_inputTexture, inputMat);
@@ -102,6 +112,8 @@ public class ShapeDetection : MonoBehaviour
             Core.MinMaxLocResult matchResult = Core.minMaxLoc(result);
             double maxVal = matchResult.maxVal; // Confidence value (0 to 1)
 
+            _matchValues.Add(maxVal);
+
             if (maxVal > _threshold)
             {
                 Debug.Log("Match found with confidence: " + maxVal);
@@ -113,6 +125,7 @@ public class ShapeDetection : MonoBehaviour
                 Debug.Log("No match found.");
             }
         }
+        CheckHighestMatch();
 
         // Display the result
         Texture2D outputTexture = new Texture2D(inputMat.cols(), inputMat.rows(), TextureFormat.RGBA32, false);
@@ -122,6 +135,8 @@ public class ShapeDetection : MonoBehaviour
 
     public void CheckBottomPartOfImage()
     {
+        _matchValues.Clear();
+
         // Convert user-assigned image to OpenCV Mat
         Mat inputMat = new Mat(_inputTexture.height, _inputTexture.width, CvType.CV_8UC4);
         Utils.texture2DToMat(_inputTexture, inputMat);
@@ -153,6 +168,8 @@ public class ShapeDetection : MonoBehaviour
             Core.MinMaxLocResult matchResult = Core.minMaxLoc(result);
             double maxVal = matchResult.maxVal; // Confidence value (0 to 1)
 
+            _matchValues.Add(maxVal);
+
             if (maxVal > _threshold)
             {
                 Debug.Log("Match found with confidence: " + maxVal);
@@ -165,12 +182,13 @@ public class ShapeDetection : MonoBehaviour
             }
         }
 
+        CheckHighestMatch();
+
         // Display the result
         Texture2D outputTexture = new Texture2D(inputMat.cols(), inputMat.rows(), TextureFormat.RGBA32, false);
         Utils.matToTexture2D(inputMat, outputTexture);
         _outputTexture.material.mainTexture = outputTexture;
     }
-
 
     //private void DrawMatchRectangle(Mat inputMat, Mat templateMat, Core.MinMaxLocResult matchResult)
     //{
@@ -185,20 +203,20 @@ public class ShapeDetection : MonoBehaviour
     // Helper function to draw a rectangle around the matched area
     void DrawMatchRectangle(Mat inputMat, Mat templateMat, Core.MinMaxLocResult matchResult, string region = "full")
     {
-        //Point matchLoc = matchResult.maxLoc;
-       // Point topLeft = matchLoc;
+        Point matchLoc = matchResult.maxLoc;
+        Point topLeft = matchLoc;
         //Point topLeft = new Point(matchLoc.x, matchLoc.y);
 
         // Adjust match location based on the selected region
         switch (region.ToLower())
         {
             case "top":
-                Point matchLoc = new Point(matchResult.maxLoc.x,  inputMat.rows()/2);
-                Point bottomRight = new Point(matchLoc.x + templateMat.cols(), matchLoc.y + templateMat.rows());
-                Imgproc.rectangle(inputMat, matchLoc, bottomRight, new Scalar(0, 255, 0), 2);
+               // Point matchLoc = new Point(matchResult.maxLoc.x,  inputMat.rows()/2);
+                //Point bottomRight = new Point(matchLoc.x + templateMat.cols(), matchLoc.y + templateMat.rows());
+                //Imgproc.rectangle(inputMat, matchLoc, bottomRight, new Scalar(0, 255, 0), 2);
                 break;
             case "bottom":
-                //matchLoc = new Point(matchResult.maxLoc.x, matchResult.maxLoc.y + inputMat.rows() / 2);
+                matchLoc = new Point(matchResult.maxLoc.x, matchResult.maxLoc.y + inputMat.rows() / 2);
                 //Point bottomRight = new Point(matchLoc.x + templateMat.cols(), matchLoc.y + templateMat.rows());
                 //Imgproc.rectangle(inputMat, topLeft, bottomRight, new Scalar(0, 255, 0), 2);
                 break;
@@ -210,8 +228,21 @@ public class ShapeDetection : MonoBehaviour
         }
 
         // Draw the rectangle
-        //Point bottomRight = new Point(matchLoc.x + templateMat.cols(), matchLoc.y + templateMat.rows());
-        //Imgproc.rectangle(inputMat, topLeft, bottomRight, new Scalar(0, 255, 0), 2);
+        Point bottomRight = new Point(matchLoc.x + templateMat.cols(), matchLoc.y + templateMat.rows());
+        Imgproc.rectangle(inputMat, topLeft, bottomRight, new Scalar(0, 255, 0), 2);
+    }
+
+    void CheckHighestMatch()
+    {
+        // Find the maximum match value and its index
+        if (_matchValues.Count > 0)
+        {
+            _highestMatchValue = _matchValues.Max();
+            int highestMatchIndex = _matchValues.IndexOf(_highestMatchValue);
+            _highestMatchTextureName = _predefinedTextures[highestMatchIndex].name;
+
+            Debug.Log("Highest match found in texture: " + _highestMatchTextureName + " with confidence: " + _highestMatchValue);
+        }
     }
 }
 
